@@ -38,6 +38,14 @@ jest.mock('@/components/ui/multiSelect', () => ({
   )),
 }));
 
+jest.mock('@/components/ui/tagSelector', () => ({
+  TagSelector: jest.fn(({ selected }) => (
+    <div data-testid="mock-tag-selector">
+      Mocked TagSelector - Selected: {selected?.join(', ') || 'none'}
+    </div>
+  )),
+}));
+
 jest.mock('../../BottomBar/BottomBar', () => {
   return jest.fn(() => <div>Mocked BottomBar</div>);
 });
@@ -274,5 +282,45 @@ describe('Tasks Component', () => {
 
     const overdueBadge = await screen.findByText('Overdue');
     expect(overdueBadge).toBeInTheDocument();
+  });
+
+  test('renders mocked TagSelector in Add Task dialog', async () => {
+    render(<Tasks {...mockProps} />);
+
+    const addButton = screen.getAllByText('Add Task')[0];
+    fireEvent.click(addButton);
+
+    expect(await screen.findByTestId('mock-tag-selector')).toBeInTheDocument();
+  });
+  test('TagSelector receives correct options and selected values', async () => {
+    render(<Tasks {...mockProps} />);
+
+    fireEvent.click(screen.getAllByText('Add Task')[0]);
+
+    const tagSelector = await screen.findByTestId('mock-tag-selector');
+
+    expect(tagSelector).toHaveTextContent('Selected: none');
+  });
+  test('Selecting tags updates newTask state', async () => {
+    (
+      require('@/components/ui/tagSelector').TagSelector as jest.Mock
+    ).mockImplementation(({ selected, onChange }) => (
+      <div>
+        <button data-testid="add-tag" onClick={() => onChange(['tag1'])}>
+          Add Tag1
+        </button>
+        <div data-testid="mock-tag-selector">
+          {selected?.join(',') || 'none'}
+        </div>
+      </div>
+    ));
+
+    render(<Tasks {...mockProps} />);
+
+    fireEvent.click(screen.getAllByText('Add Task')[0]);
+
+    fireEvent.click(await screen.findByTestId('add-tag'));
+
+    expect(screen.getByTestId('mock-tag-selector')).toHaveTextContent('tag1');
   });
 });
