@@ -1,6 +1,11 @@
 import { useEffect, useState, useCallback } from 'react';
 import { Task } from '../../utils/types';
 import { ReportsView } from './ReportsView';
+import { isOverdue, sortWithOverdueOnTop } from './utils/date-utils';
+import {
+  getDependencyLabel,
+  filterAvailableDependencies,
+} from './utils/dependency-utils';
 import Fuse from 'fuse.js';
 import {
   Table,
@@ -135,25 +140,6 @@ export const Tasks = (
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedTerm, setDebouncedTerm] = useState('');
   const [lastSyncTime, setLastSyncTime] = useState<number | null>(null);
-
-  const isOverdue = (due?: string) => {
-    if (!due) return false;
-
-    const parsed = new Date(
-      due.replace(
-        /^(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})Z$/,
-        '$1-$2-$3T$4:$5:$6Z'
-      )
-    );
-
-    const dueDate = new Date(parsed);
-    dueDate.setHours(0, 0, 0, 0);
-
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-
-    return dueDate < today;
-  };
 
   const debouncedSearch = debounce((value: string) => {
     setDebouncedTerm(value);
@@ -595,20 +581,6 @@ export const Tasks = (
   // Handle removing a tag while editing task
   const handleRemoveEditTag = (tagToRemove: string) => {
     setEditedTags(editedTags.filter((tag) => tag !== tagToRemove));
-  };
-
-  const sortWithOverdueOnTop = (tasks: Task[]) => {
-    return [...tasks].sort((a, b) => {
-      const aOverdue = a.status === 'pending' && isOverdue(a.due);
-      const bOverdue = b.status === 'pending' && isOverdue(b.due);
-
-      // Overdue always on top
-      if (aOverdue && !bOverdue) return -1;
-      if (!aOverdue && bOverdue) return 1;
-
-      // Otherwise fall back to ID sort and status sort
-      return 0;
-    });
   };
 
   useEffect(() => {
@@ -1515,8 +1487,10 @@ export const Tasks = (
                                                         }
                                                       }}
                                                     >
-                                                      {depTask?.description ||
-                                                        depUuid.substring(0, 8)}
+                                                      {getDependencyLabel(
+                                                        depTask,
+                                                        depUuid
+                                                      )}
                                                     </Badge>
                                                   );
                                                 }
@@ -1548,11 +1522,10 @@ export const Tasks = (
                                                         variant="secondary"
                                                       >
                                                         <span>
-                                                          {depTask?.description ||
-                                                            depUuid.substring(
-                                                              0,
-                                                              8
-                                                            )}
+                                                          {getDependencyLabel(
+                                                            depTask,
+                                                            depUuid
+                                                          )}
                                                         </span>
                                                         <button
                                                           type="button"
@@ -1602,47 +1575,36 @@ export const Tasks = (
                                                         }
                                                         className="m-2 w-[calc(100%-1rem)]"
                                                       />
-                                                      {tasks
-                                                        .filter(
-                                                          (t) =>
-                                                            t.uuid !==
-                                                              task.uuid &&
-                                                            t.status ===
-                                                              'pending' &&
-                                                            !editedDepends.includes(
+                                                      {filterAvailableDependencies(
+                                                        tasks,
+                                                        editedDepends,
+                                                        dependsSearchTerm,
+                                                        task.uuid
+                                                      ).map((t) => (
+                                                        <div
+                                                          key={t.uuid}
+                                                          className="flex items-center gap-2 p-2 hover:bg-accent cursor-pointer"
+                                                          onClick={() => {
+                                                            handleAddDependency(
                                                               t.uuid
-                                                            ) &&
-                                                            t.description
-                                                              .toLowerCase()
-                                                              .includes(
-                                                                dependsSearchTerm.toLowerCase()
-                                                              )
-                                                        )
-                                                        .map((t) => (
-                                                          <div
-                                                            key={t.uuid}
-                                                            className="flex items-center gap-2 p-2 hover:bg-accent cursor-pointer"
-                                                            onClick={() => {
-                                                              handleAddDependency(
-                                                                t.uuid
-                                                              );
-                                                              setDependsSearchTerm(
-                                                                ''
-                                                              );
-                                                            }}
-                                                          >
-                                                            <input
-                                                              type="checkbox"
-                                                              checked={editedDepends.includes(
-                                                                t.uuid
-                                                              )}
-                                                              readOnly
-                                                            />
-                                                            <span className="text-sm">
-                                                              {t.description}
-                                                            </span>
-                                                          </div>
-                                                        ))}
+                                                            );
+                                                            setDependsSearchTerm(
+                                                              ''
+                                                            );
+                                                          }}
+                                                        >
+                                                          <input
+                                                            type="checkbox"
+                                                            checked={editedDepends.includes(
+                                                              t.uuid
+                                                            )}
+                                                            readOnly
+                                                          />
+                                                          <span className="text-sm">
+                                                            {t.description}
+                                                          </span>
+                                                        </div>
+                                                      ))}
                                                     </div>
                                                   )}
                                                 </div>
