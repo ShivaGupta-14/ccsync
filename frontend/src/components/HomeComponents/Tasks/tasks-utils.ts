@@ -289,3 +289,14 @@ export const hashKey = (key: string, email: string): string => {
   }
   return Math.abs(hash).toString(36);
 };
+
+export const processTagInput = (
+  key: string,
+  tagInput: string,
+  existingTags: string[]
+): string | null => {
+  if (key !== 'Enter' || !tagInput.trim()) return null;
+
+  const newTag = tagInput.trim();
+  return existingTags.includes(newTag) ? null : newTag;
+};

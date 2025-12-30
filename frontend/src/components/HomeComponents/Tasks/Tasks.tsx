@@ -93,6 +93,7 @@ export const Tasks = (
     depends: [],
   });
   const [isCreatingNewProject, setIsCreatingNewProject] = useState(false);
+  const [isCreatingNewTag, setIsCreatingNewTag] = useState(false);
   const [isAddTaskOpen, setIsAddTaskOpen] = useState(false);
   const [_isDialogOpen, setIsDialogOpen] = useState(false);
   const [tagInput, setTagInput] = useState('');
@@ -1073,9 +1074,12 @@ export const Tasks = (
                         tagInput={tagInput}
                         setTagInput={setTagInput}
                         onSubmit={handleAddTask}
+                        uniqueProjects={uniqueProjects}
                         isCreatingNewProject={isCreatingNewProject}
                         setIsCreatingNewProject={setIsCreatingNewProject}
-                        uniqueProjects={uniqueProjects}
+                        uniqueTags={uniqueTags}
+                        isCreatingNewTag={isCreatingNewTag}
+                        setIsCreatingNewTag={setIsCreatingNewTag}
                         allTasks={tasks}
                       />
                     </div>
@@ -1202,6 +1206,9 @@ export const Tasks = (
                             uniqueProjects={uniqueProjects}
                             isCreatingNewProject={isCreatingNewProject}
                             setIsCreatingNewProject={setIsCreatingNewProject}
+                            uniqueTags={uniqueTags}
+                            isCreatingNewTag={isCreatingNewTag}
+                            setIsCreatingNewTag={setIsCreatingNewTag}
                             onSaveDescription={handleSaveDescription}
                             onSaveTags={handleSaveTags}
                             onSavePriority={handleSavePriority}
@@ -1381,9 +1388,12 @@ export const Tasks = (
                         tagInput={tagInput}
                         setTagInput={setTagInput}
                         onSubmit={handleAddTask}
+                        uniqueProjects={uniqueProjects}
                         isCreatingNewProject={isCreatingNewProject}
                         setIsCreatingNewProject={setIsCreatingNewProject}
-                        uniqueProjects={uniqueProjects}
+                        uniqueTags={uniqueTags}
+                        isCreatingNewTag={isCreatingNewTag}
+                        setIsCreatingNewTag={setIsCreatingNewTag}
                         allTasks={tasks}
                       />
                     </div>

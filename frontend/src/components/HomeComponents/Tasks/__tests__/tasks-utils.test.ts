@@ -13,6 +13,7 @@ import {
   hashKey,
   parseTaskwarriorDate,
   isOverdue,
+  processTagInput,
 } from '../tasks-utils';
 import { Task } from '@/components/utils/types';
 
@@ -634,5 +635,37 @@ describe('isOverdue', () => {
 
   it('returns false for invalid date format', () => {
     expect(isOverdue('invalid-date')).toBe(false);
+  });
+});
+
+describe('processTagInput', () => {
+  it('returns null when key is not Enter', () => {
+    const result = processTagInput('a', 'newtag', ['existing']);
+    expect(result).toBeNull();
+  });
+
+  it('returns null when tagInput is empty', () => {
+    const result = processTagInput('Enter', '', ['existing']);
+    expect(result).toBeNull();
+  });
+
+  it('returns null when tagInput is only whitespace', () => {
+    const result = processTagInput('Enter', '   ', ['existing']);
+    expect(result).toBeNull();
+  });
+
+  it('returns null when tag already exists', () => {
+    const result = processTagInput('Enter', 'existing', ['existing', 'other']);
+    expect(result).toBeNull();
+  });
+
+  it('returns trimmed tag when valid and not duplicate', () => {
+    const result = processTagInput('Enter', 'newtag', ['existing']);
+    expect(result).toBe('newtag');
+  });
+
+  it('trims whitespace from tag input', () => {
+    const result = processTagInput('Enter', '  newtag  ', ['existing']);
+    expect(result).toBe('newtag');
   });
 });

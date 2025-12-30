@@ -24,6 +24,7 @@ import {
 } from '@/components/ui/select';
 import { AddTaskDialogProps } from '@/components/utils/types';
 import { format } from 'date-fns';
+import { processTagInput } from './tasks-utils';
 
 export const AddTaskdialog = ({
   isOpen,
@@ -36,6 +37,9 @@ export const AddTaskdialog = ({
   isCreatingNewProject,
   setIsCreatingNewProject,
   uniqueProjects = [],
+  isCreatingNewTag,
+  setIsCreatingNewTag,
+  uniqueTags = [],
   allTasks = [],
 }: AddTaskDialogProps) => {
   const [annotationInput, setAnnotationInput] = useState('');
@@ -100,13 +104,6 @@ export const AddTaskdialog = ({
         (annotation) => annotation !== annotationToRemove
       ),
     });
-  };
-
-  const handleAddTag = () => {
-    if (tagInput && !newTask.tags.includes(tagInput, 0)) {
-      setNewTask({ ...newTask, tags: [...newTask.tags, tagInput] });
-      setTagInput('');
-    }
   };
 
   const handleRemoveTag = (tagToRemove: string) => {
@@ -194,6 +191,7 @@ export const AddTaskdialog = ({
             </Label>
             <div className="col-span-3 space-y-2">
               <Select
+                data-testid="project-select"
                 value={
                   isCreatingNewProject ? '__CREATE_NEW__' : newTask.project
                 }
@@ -207,7 +205,7 @@ export const AddTaskdialog = ({
                   }
                 }}
               >
-                <SelectTrigger id="project" data-testid="project-select">
+                <SelectTrigger id="project">
                   <SelectValue
                     placeholder={
                       uniqueProjects.length
@@ -373,24 +371,84 @@ export const AddTaskdialog = ({
               </select>
             </div>
           </div>
-          <div className="grid grid-cols-8 items-center gap-4">
-            <Label htmlFor="tags" className="text-right col-span-2">
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="tags" className="text-right">
               Tags
             </Label>
-            <div className="col-span-6">
-              <Input
-                id="tags"
-                name="tags"
-                placeholder="Add a tag"
-                value={tagInput}
-                onChange={(e) => setTagInput(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleAddTag()}
-                required
-                className="col-span-6"
-              />
+            <div className="col-span-3 space-y-2">
+              <Select
+                data-testid="tags-select"
+                value={isCreatingNewTag ? '__CREATE_NEW__' : '__SELECT__'}
+                onValueChange={(value) => {
+                  if (value === '__CREATE_NEW__') {
+                    setIsCreatingNewTag(true);
+                  } else if (value !== '__SELECT__') {
+                    if (!newTask.tags.includes(value)) {
+                      setNewTask({
+                        ...newTask,
+                        tags: [...newTask.tags, value],
+                      });
+                    }
+                  }
+                }}
+              >
+                <SelectTrigger id="tags">
+                  <SelectValue
+                    placeholder={
+                      uniqueTags.length ? 'Select a tag' : 'No tags yet'
+                    }
+                  >
+                    {isCreatingNewTag
+                      ? tagInput
+                        ? `New Tag: ${tagInput}`
+                        : '+ Create new tag…'
+                      : 'Select a tag'}
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent
+                  onWheel={(e) => e.stopPropagation()}
+                  onKeyDown={(e) => e.stopPropagation()}
+                  className="max-h-60 overflow-y-auto"
+                >
+                  <SelectItem value="__CREATE_NEW__">
+                    + Create new tag…
+                  </SelectItem>
+                  {uniqueTags.map((tag: string) => {
+                    const isSelected = newTask.tags.includes(tag);
+                    return (
+                      <SelectItem key={tag} value={tag} disabled={isSelected}>
+                        {tag}
+                      </SelectItem>
+                    );
+                  })}
+                </SelectContent>
+              </Select>
+              {isCreatingNewTag && (
+                <Input
+                  id="tag-name"
+                  placeholder="New tag name"
+                  value={tagInput}
+                  autoFocus
+                  onChange={(e) => setTagInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    const newTag = processTagInput(
+                      e.key,
+                      tagInput,
+                      newTask.tags
+                    );
+                    if (newTag) {
+                      setNewTask({
+                        ...newTask,
+                        tags: [...newTask.tags, newTag],
+                      });
+                      setTagInput('');
+                      setIsCreatingNewTag(false);
+                    }
+                  }}
+                />
+              )}
             </div>
           </div>
-
           <div className="mt-2">
             {newTask.tags.length > 0 && (
               <div className="grid grid-cols-4 items-center">

@@ -30,11 +30,15 @@ jest.mock('@/components/ui/date-picker', () => ({
 
 jest.mock('@/components/ui/select', () => {
   return {
-    Select: ({ children, onValueChange, value }: any) => {
-      // Create a simple select element that calls onValueChange when changed
+    Select: ({
+      children,
+      onValueChange,
+      value,
+      'data-testid': testId,
+    }: any) => {
       return (
         <select
-          data-testid="project-select"
+          data-testid={testId}
           value={value || ''}
           onChange={(e) => onValueChange?.(e.target.value)}
         >
@@ -42,9 +46,9 @@ jest.mock('@/components/ui/select', () => {
         </select>
       );
     },
-    SelectTrigger: ({ children, 'data-testid': dataTestId, ...props }: any) => (
-      <div {...props}>{children}</div>
-    ),
+    SelectTrigger: ({ children, ...props }: any) => {
+      return <div {...props}>{children}</div>;
+    },
     SelectValue: ({ placeholder }: any) => (
       <option value="" disabled>
         {placeholder}
@@ -85,9 +89,12 @@ describe('AddTaskDialog Component', () => {
       setTagInput: jest.fn(),
       onSubmit: jest.fn(),
       uniqueProjects: [],
-      allTasks: [],
       isCreatingNewProject: false,
       setIsCreatingNewProject: jest.fn(),
+      uniqueTags: [],
+      isCreatingNewTag: false,
+      setIsCreatingNewTag: jest.fn(),
+      allTasks: [],
     };
   });
 
@@ -283,37 +290,34 @@ describe('AddTaskDialog Component', () => {
   });
 
   describe('Tags', () => {
-    test('adds a tag when user types and presses Enter', () => {
+    beforeEach(() => {
       mockProps.isOpen = true;
-      mockProps.tagInput = 'urgent';
+      mockProps.uniqueTags = ['work', 'personal', 'urgent'];
+    });
+
+    test('adds tag from dropdown when selected', () => {
       render(<AddTaskdialog {...mockProps} />);
 
-      const tagsInput = screen.getByPlaceholderText(/add a tag/i);
-
-      fireEvent.keyDown(tagsInput, { key: 'Enter', code: 'Enter' });
+      const tagsSelect = screen.getByTestId('tags-select');
+      fireEvent.change(tagsSelect, { target: { value: 'work' } });
 
       expect(mockProps.setNewTask).toHaveBeenCalledWith({
         ...mockProps.newTask,
-        tags: ['urgent'],
+        tags: ['work'],
       });
-
-      expect(mockProps.setTagInput).toHaveBeenCalledWith('');
     });
 
     test('does not add duplicate tags', () => {
-      mockProps.isOpen = true;
-      mockProps.tagInput = 'urgent';
-      mockProps.newTask.tags = ['urgent'];
+      mockProps.newTask.tags = ['work'];
       render(<AddTaskdialog {...mockProps} />);
 
-      const tagsInput = screen.getByPlaceholderText(/add a tag/i);
-      fireEvent.keyDown(tagsInput, { key: 'Enter', code: 'Enter' });
+      const tagsSelect = screen.getByTestId('tags-select');
+      fireEvent.change(tagsSelect, { target: { value: 'work' } });
 
       expect(mockProps.setNewTask).not.toHaveBeenCalled();
     });
 
     test('removes a tag when user clicks the remove button', () => {
-      mockProps.isOpen = true;
       mockProps.newTask.tags = ['urgent', 'important'];
       render(<AddTaskdialog {...mockProps} />);
 
@@ -328,7 +332,7 @@ describe('AddTaskDialog Component', () => {
     });
 
     test('displays tags as badges', () => {
-      mockProps.isOpen = true;
+      mockProps.uniqueTags = [];
       mockProps.newTask.tags = ['urgent', 'work'];
       render(<AddTaskdialog {...mockProps} />);
 
@@ -337,24 +341,64 @@ describe('AddTaskDialog Component', () => {
     });
 
     test('updates tagInput when user types in tag field', () => {
-      mockProps.isOpen = true;
+      mockProps.isCreatingNewTag = true;
       render(<AddTaskdialog {...mockProps} />);
 
-      const tagsInput = screen.getByPlaceholderText(/add a tag/i);
-      fireEvent.change(tagsInput, { target: { value: 'new-tag' } });
+      const tagInput = screen.getByPlaceholderText('New tag name');
+      fireEvent.change(tagInput, { target: { value: 'new-tag' } });
 
       expect(mockProps.setTagInput).toHaveBeenCalledWith('new-tag');
     });
 
     test('does not add empty tag when tagInput is empty', () => {
-      mockProps.isOpen = true;
+      mockProps.isCreatingNewTag = true;
       mockProps.tagInput = '';
       render(<AddTaskdialog {...mockProps} />);
 
-      const tagsInput = screen.getByPlaceholderText(/add a tag/i);
-      fireEvent.keyDown(tagsInput, { key: 'Enter', code: 'Enter' });
+      const tagInput = screen.getByPlaceholderText('New tag name');
+      fireEvent.keyDown(tagInput, { key: 'Enter', code: 'Enter' });
 
       expect(mockProps.setNewTask).not.toHaveBeenCalled();
+    });
+
+    test('displays unique tags in dropdown options', () => {
+      render(<AddTaskdialog {...mockProps} />);
+
+      expect(screen.getByText('work')).toBeInTheDocument();
+      expect(screen.getByText('personal')).toBeInTheDocument();
+      expect(screen.getByText('urgent')).toBeInTheDocument();
+    });
+
+    test('disables already selected tags from dropdown', () => {
+      mockProps.newTask.tags = ['work'];
+
+      render(<AddTaskdialog {...mockProps} />);
+
+      const workOption = screen.queryByRole('option', { name: 'work' });
+      expect(workOption).toBeDisabled();
+
+      const personalOption = screen.getByRole('option', { name: 'personal' });
+      expect(personalOption).not.toBeDisabled();
+    });
+
+    test('sets isCreatingNewTag to true when "create new tag" is selected', () => {
+      render(<AddTaskdialog {...mockProps} />);
+
+      const tagsSelect = screen.getByTestId('tags-select');
+      fireEvent.change(tagsSelect, { target: { value: '__CREATE_NEW__' } });
+
+      expect(mockProps.setIsCreatingNewTag).toHaveBeenCalledWith(true);
+    });
+
+    test('closes create mode after adding new tag', () => {
+      mockProps.isCreatingNewTag = true;
+      mockProps.tagInput = 'newTag';
+      render(<AddTaskdialog {...mockProps} />);
+
+      const tagInput = screen.getByPlaceholderText('New tag name');
+      fireEvent.keyDown(tagInput, { key: 'Enter' });
+
+      expect(mockProps.setIsCreatingNewTag).toHaveBeenCalledWith(false);
     });
   });
 
