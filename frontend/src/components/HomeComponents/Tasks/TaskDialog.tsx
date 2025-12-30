@@ -48,9 +48,12 @@ export const TaskDialog = ({
   editState,
   onUpdateState,
   allTasks,
+  uniqueProjects,
   isCreatingNewProject,
   setIsCreatingNewProject,
-  uniqueProjects,
+  uniqueTags,
+  isCreatingNewTag,
+  setIsCreatingNewTag,
   onSaveDescription,
   onSaveTags,
   onSavePriority,
@@ -795,7 +798,10 @@ export const TaskDialog = ({
                             })
                           }
                         >
-                          <SelectTrigger className="flex-grow mr-2">
+                          <SelectTrigger
+                            className="flex-grow mr-2"
+                            data-testid="priority-select"
+                          >
                             <SelectValue placeholder="Select priority" />
                           </SelectTrigger>
                           <SelectContent>
@@ -995,44 +1001,60 @@ export const TaskDialog = ({
                   <TableCell>Tags:</TableCell>
                   <TableCell>
                     {editState.isEditingTags ? (
-                      <div>
-                        <div className="flex items-center w-full">
-                          <Input
-                            type="text"
-                            value={editState.editTagInput}
-                            onChange={(e) => {
-                              // For allowing only alphanumeric characters
-                              if (e.target.value.length > 1) {
-                                /^[a-zA-Z0-9]*$/.test(e.target.value.trim())
-                                  ? onUpdateState({
-                                      editTagInput: e.target.value.trim(),
-                                    })
-                                  : '';
-                              } else {
-                                /^[a-zA-Z]*$/.test(e.target.value.trim())
-                                  ? onUpdateState({
-                                      editTagInput: e.target.value.trim(),
-                                    })
-                                  : '';
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2">
+                          <Select
+                            value={
+                              isCreatingNewTag ? '__CREATE_NEW__' : '__SELECT__'
+                            }
+                            onValueChange={(value) => {
+                              if (value === '__CREATE_NEW__') {
+                                setIsCreatingNewTag(true);
+                              } else if (value !== '__SELECT__') {
+                                if (!editState.editedTags.includes(value)) {
+                                  onUpdateState({
+                                    editedTags: [
+                                      ...editState.editedTags,
+                                      value,
+                                    ],
+                                  });
+                                }
+                                setIsCreatingNewTag(false);
                               }
                             }}
-                            placeholder="Add a tag (press enter to add)"
-                            className="flex-grow mr-2"
-                            onKeyDown={(e) => {
-                              if (
-                                e.key === 'Enter' &&
-                                editState.editTagInput.trim()
-                              ) {
-                                onUpdateState({
-                                  editedTags: [
-                                    ...editState.editedTags,
-                                    editState.editTagInput.trim(),
-                                  ],
-                                  editTagInput: '',
-                                });
-                              }
-                            }}
-                          />
+                          >
+                            <SelectTrigger
+                              key={editState.editTagInput}
+                              className="flex-1"
+                              data-testid="tags-select"
+                            >
+                              <SelectValue placeholder="Select a tag">
+                                {isCreatingNewTag
+                                  ? editState.editTagInput
+                                    ? `New Tag: ${editState.editTagInput}`
+                                    : '+ Create new tag…'
+                                  : 'Select a tag'}
+                              </SelectValue>
+                            </SelectTrigger>
+                            <SelectContent
+                              onWheel={(e) => e.stopPropagation()}
+                              onKeyDown={(e) => e.stopPropagation()}
+                              className="max-h-60 overflow-y-auto"
+                            >
+                              <SelectItem value="__CREATE_NEW__">
+                                + Create new tag…
+                              </SelectItem>
+                              {uniqueTags
+                                .filter(
+                                  (tag) => !editState.editedTags.includes(tag)
+                                )
+                                .map((tag) => (
+                                  <SelectItem key={tag} value={tag}>
+                                    {tag}
+                                  </SelectItem>
+                                ))}
+                            </SelectContent>
+                          </Select>
                           <Button
                             variant="ghost"
                             size="icon"
@@ -1043,6 +1065,7 @@ export const TaskDialog = ({
                                 isEditingTags: false,
                                 editTagInput: '',
                               });
+                              setIsCreatingNewTag(false);
                             }}
                           >
                             <CheckIcon className="h-4 w-4 text-green-500" />
@@ -1050,46 +1073,72 @@ export const TaskDialog = ({
                           <Button
                             variant="ghost"
                             size="icon"
-                            aria-label="Cancel editing tags"
+                            aria-label="Cancel"
                             onClick={() => {
                               onUpdateState({
                                 isEditingTags: false,
                                 editedTags: task.tags || [],
                                 editTagInput: '',
                               });
+                              setIsCreatingNewTag(false);
                             }}
                           >
                             <XIcon className="h-4 w-4 text-red-500" />
                           </Button>
                         </div>
-                        <div className="mt-2">
-                          {editState.editedTags != null &&
-                            editState.editedTags.length > 0 && (
-                              <div>
-                                <div className="flex flex-wrap gap-2 col-span-3">
-                                  {editState.editedTags.map((tag, index) => (
-                                    <Badge key={index}>
-                                      <span>{tag}</span>
-                                      <button
-                                        type="button"
-                                        className="ml-2 text-red-500"
-                                        onClick={() =>
-                                          onUpdateState({
-                                            editedTags:
-                                              editState.editedTags.filter(
-                                                (t) => t !== tag
-                                              ),
-                                          })
-                                        }
-                                      >
-                                        ✖
-                                      </button>
-                                    </Badge>
-                                  ))}
-                                </div>
-                              </div>
-                            )}
-                        </div>
+                        {isCreatingNewTag && (
+                          <Input
+                            placeholder="New tag name"
+                            value={editState.editTagInput}
+                            autoFocus
+                            onChange={(e) =>
+                              onUpdateState({ editTagInput: e.target.value })
+                            }
+                            onKeyDown={(e) => {
+                              if (
+                                e.key === 'Enter' &&
+                                editState.editTagInput.trim()
+                              ) {
+                                if (
+                                  !editState.editedTags.includes(
+                                    editState.editTagInput.trim()
+                                  )
+                                ) {
+                                  onUpdateState({
+                                    editedTags: [
+                                      ...editState.editedTags,
+                                      editState.editTagInput.trim(),
+                                    ],
+                                    editTagInput: '',
+                                  });
+                                }
+                                setIsCreatingNewTag(false);
+                              }
+                            }}
+                          />
+                        )}
+                        {editState.editedTags.length > 0 && (
+                          <div className="flex flex-wrap gap-2">
+                            {editState.editedTags.map((tag, index) => (
+                              <Badge key={index}>
+                                <span>{tag}</span>
+                                <button
+                                  type="button"
+                                  className="ml-2 text-red-500"
+                                  onClick={() =>
+                                    onUpdateState({
+                                      editedTags: editState.editedTags.filter(
+                                        (t) => t !== tag
+                                      ),
+                                    })
+                                  }
+                                >
+                                  ✖
+                                </button>
+                              </Badge>
+                            ))}
+                          </div>
+                        )}
                       </div>
                     ) : (
                       <div className="flex items-center flex-wrap">
@@ -1229,7 +1278,10 @@ export const TaskDialog = ({
                             onUpdateState({ editedRecur: value })
                           }
                         >
-                          <SelectTrigger className="flex-grow">
+                          <SelectTrigger
+                            className="flex-grow"
+                            data-testid="recur-select"
+                          >
                             <SelectValue placeholder="Select recurrence" />
                           </SelectTrigger>
                           <SelectContent>

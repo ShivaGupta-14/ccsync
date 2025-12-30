@@ -90,6 +90,9 @@ describe('TaskDialog Component', () => {
     uniqueProjects: [],
     isCreatingNewProject: false,
     setIsCreatingNewProject: jest.fn(),
+    uniqueTags: [],
+    isCreatingNewTag: false,
+    setIsCreatingNewTag: jest.fn(),
     onSaveDescription: jest.fn(),
     onSaveTags: jest.fn(),
     onSavePriority: jest.fn(),
@@ -342,29 +345,6 @@ describe('TaskDialog Component', () => {
           editTagInput: '',
         });
       }
-    });
-
-    test('should add new tag on Enter key press', () => {
-      const editingState = {
-        ...mockEditState,
-        isEditingTags: true,
-        editTagInput: 'newtag',
-        editedTags: ['tag1', 'tag2'],
-      };
-
-      render(
-        <TaskDialog {...defaultProps} isOpen={true} editState={editingState} />
-      );
-
-      const input = screen.getByPlaceholderText(
-        'Add a tag (press enter to add)'
-      );
-      fireEvent.keyDown(input, { key: 'Enter' });
-
-      expect(defaultProps.onUpdateState).toHaveBeenCalledWith({
-        editedTags: ['tag1', 'tag2', 'newtag'],
-        editTagInput: '',
-      });
     });
 
     test('should remove tag when X button is clicked', () => {
